@@ -12,9 +12,9 @@ class Particle:
     def __init__(self, x:int, y:int, lifetime: int , behaviour: str, rect: pygame.rect.Rect, special: dict = {}) -> None:
         self.color = pygame.color.Color(144,122,24)
         self.keys = special.keys()
-        if ['color'] in self.keys:
+        if 'color' in self.keys:
             self.color = pygame.color.Color(special['color'])
-        if ['alpha'] in self.keys:
+        if 'alpha' in self.keys:
             self.color.a = special['alpha']
         self.surface = pygame.display.get_surface()
         self.x = x
