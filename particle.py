@@ -1,6 +1,7 @@
 import pygame
 import numpy as np
 import math
+
 from settings import *
 import random
 
@@ -16,7 +17,7 @@ class Particle:
             self.color = pygame.color.Color(special['color'])
         if 'alpha' in self.keys:
             self.color.a = special['alpha']
-        self.surface = pygame.display.get_surface()
+        self.screen = pygame.display.get_surface()
         self.x = x
         self.y = y
         self.lifetime = lifetime
@@ -29,11 +30,44 @@ class Particle:
         pass
 
     def draw(self):
-        pygame.draw.rect(self.surface, self.color, self.rect)
+        pygame.draw.rect(self.screen, self.color, self.rect)
+
+class LightParticle(Particle):
+    def __init__(self, x: int, y: int, lifetime: int, behaviour: str, special: dict = {}) -> None:
+        self.radius = 20
+        self.color = (14,14,14)
+        self.surface = self.circle_surface()
+        self.target = None
+        if 'radius' in special.keys():
+            self.radius = special['radius']
+        if 'target' in special.keys():
+            self.target = special['target']
+        super().__init__(x, y, lifetime, behaviour, pygame.rect.Rect(0,0,0,0), special)
+
+
+
+    def circle_surface(self):
+        surf = pygame.Surface((self.radius * 2, self.radius * 2))
+        pygame.draw.circle(surf, self.color, (self.radius, self.radius), self.radius)
+        surf.set_colorkey((0,0,0))
+        return surf
+
+    def draw(self):
+        # updating values
+        #self.radius -= self.radius / self.radius + self.lifetime
+        #self.surface = self.circle_surface()
+
+        if self.target:
+            self.screen.blit(self.surface, (self.target.rect.x + self.target.rect.width / 2- self.radius,
+                                            self.target.rect.y + self.target.rect.height / 2 - self.radius),
+                             special_flags=pygame.BLEND_RGB_ADD)
+        else:
+            self.screen.blit(self.surface, (self.x, self.y), special_flags=pygame.BLEND_RGB_ADD)
 
 class ParticleHandler:
     def __init__(self) -> None:
         self.particles = []
+        self.lights = []
         self.iter = 0
         self.spawn_interval = pygame.time.get_ticks()
 
@@ -46,15 +80,26 @@ class ParticleHandler:
         for particle in self.particles:
             particle.draw()
 
-    def add_particle(self, x, y, lifetime, behaviour, special=None, interval=None):
+    def add_light(self, x, y, lifetime=100, behaviour='default', special={}):
+        light = LightParticle(x, y, lifetime, behaviour, special)
+        self.particles.append(light)
+
+
+    def add_particle(self, x, y, width, height, lifetime, behaviour, special={}, interval=None):
         current_tick = pygame.time.get_ticks()
-        rect = pygame.rect.Rect(x, y, 8, 8)
+        rect = pygame.rect.Rect(x, y, width, height)
         if interval == None:
-            particle = Particle(x, y, lifetime, behaviour, rect)
+            particle = Particle(x, y, lifetime, behaviour, rect, special=special)
             self.particles.append(particle)
+
         else:
             if current_tick - self.spawn_interval > interval *1000:
-                particle = Particle(x, y, lifetime, behaviour, rect)
+                particle = Particle(x, y, lifetime, behaviour, rect, special=special)
+                if 'light' in special.keys():
+                    if 'light_mode' in special.keys():
+                        if special['light_mode'] == 'follow':
+                            special['target'] = particle
+                            light = self.add_light(x, y, lifetime, behaviour, special)
                 self.particles.append(particle)
                 self.spawn_interval = current_tick
             else:
